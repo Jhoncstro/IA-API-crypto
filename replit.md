@@ -2,7 +2,7 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+pnpm workspace monorepo using TypeScript. Includes an AI API with chat, image generation, and voice capabilities powered by OpenAI via Replit AI Integrations.
 
 ## Stack
 
@@ -15,6 +15,20 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+- **AI**: OpenAI via Replit AI Integrations (`@workspace/integrations-openai-ai-server`)
+
+## AI API Endpoints
+
+All endpoints under `/api/openai/`:
+
+- `GET /openai/conversations` — lista conversas
+- `POST /openai/conversations` — cria conversa (body: `{title}`)
+- `GET /openai/conversations/:id` — busca conversa com mensagens
+- `DELETE /openai/conversations/:id` — deleta conversa
+- `GET /openai/conversations/:id/messages` — lista mensagens
+- `POST /openai/conversations/:id/messages` — envia mensagem de texto (SSE streaming)
+- `POST /openai/conversations/:id/voice-messages` — envia áudio (SSE streaming, base64)
+- `POST /openai/generate-image` — gera imagem (body: `{prompt, size?}`)
 
 ## Key Commands
 
