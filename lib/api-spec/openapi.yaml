@@ -1,6 +1,5 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: API specification
@@ -12,13 +11,14 @@ tags:
     description: Health operations
   - name: openai
     description: OpenAI AI chat, image, and audio operations
+  - name: finance
+    description: Financial analysis — transactions, gateways, and market data
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -26,6 +26,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── OpenAI Chat ──────────────────────────────────────────────────────────────
   /openai/conversations:
     get:
       operationId: listOpenaiConversations
@@ -80,7 +82,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OpenaiError"
+                $ref: "#/components/schemas/ApiError"
     delete:
       operationId: deleteOpenaiConversation
       tags: [openai]
@@ -99,7 +101,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OpenaiError"
+                $ref: "#/components/schemas/ApiError"
   /openai/conversations/{id}/messages:
     get:
       operationId: listOpenaiMessages
@@ -146,9 +148,6 @@ paths:
       operationId: sendOpenaiVoiceMessage
       tags: [openai]
       summary: Send audio and receive a streaming voice response
-      description: |
-        This endpoint is for gpt-audio speech-to-speech flows.
-        It accepts base64-encoded audio input and streams back transcript and audio events.
       parameters:
         - name: id
           in: path
@@ -184,6 +183,266 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenerateOpenaiImageResponse"
+
+  # ── Finance: Transactions ─────────────────────────────────────────────────
+  /finance/transactions:
+    get:
+      operationId: listTransactions
+      tags: [finance]
+      summary: List all analyzed transactions
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: gateway
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+    post:
+      operationId: createTransaction
+      tags: [finance]
+      summary: Submit a transaction for AI analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransactionBody"
+      responses:
+        "201":
+          description: Transaction created and analyzed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+  /finance/transactions/{id}:
+    get:
+      operationId: getTransaction
+      tags: [finance]
+      summary: Get a transaction by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Transaction detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /finance/transactions/{id}/analyze:
+    post:
+      operationId: analyzeTransaction
+      tags: [finance]
+      summary: Re-run AI analysis on an existing transaction (streaming)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: SSE stream of AI analysis chunks
+          content:
+            text/event-stream: {}
+  /finance/transactions/batch-analyze:
+    post:
+      operationId: batchAnalyzeTransactions
+      tags: [finance]
+      summary: AI analysis over a batch of transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchAnalyzeTransactionsBody"
+      responses:
+        "200":
+          description: Batch analysis summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchAnalysisResult"
+  /finance/transactions/summary:
+    get:
+      operationId: getTransactionSummary
+      tags: [finance]
+      summary: Aggregate summary of all transactions
+      responses:
+        "200":
+          description: Summary statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionSummary"
+
+  # ── Finance: Gateways ─────────────────────────────────────────────────────
+  /finance/gateways:
+    get:
+      operationId: listGateways
+      tags: [finance]
+      summary: List all payment gateways
+      responses:
+        "200":
+          description: List of gateways
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Gateway"
+    post:
+      operationId: createGateway
+      tags: [finance]
+      summary: Register a new payment gateway
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGatewayBody"
+      responses:
+        "201":
+          description: Gateway created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gateway"
+  /finance/gateways/{id}:
+    get:
+      operationId: getGateway
+      tags: [finance]
+      summary: Get gateway by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Gateway detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gateway"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /finance/gateways/{id}/analyze:
+    post:
+      operationId: analyzeGateway
+      tags: [finance]
+      summary: AI analysis of gateway performance (streaming)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: SSE stream of AI analysis
+          content:
+            text/event-stream: {}
+
+  # ── Finance: Market ───────────────────────────────────────────────────────
+  /finance/market:
+    get:
+      operationId: listMarketAssets
+      tags: [finance]
+      summary: List tracked market assets
+      parameters:
+        - name: assetType
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of market assets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarketAsset"
+    post:
+      operationId: createMarketAsset
+      tags: [finance]
+      summary: Add or update a market asset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMarketAssetBody"
+      responses:
+        "201":
+          description: Asset created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketAsset"
+  /finance/market/{id}/analyze:
+    post:
+      operationId: analyzeMarketAsset
+      tags: [finance]
+      summary: AI analysis of a market asset (streaming)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: SSE stream of AI market analysis
+          content:
+            text/event-stream: {}
+  /finance/market/overview:
+    post:
+      operationId: getMarketOverview
+      tags: [finance]
+      summary: AI-powered overview of the full market portfolio (streaming)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarketOverviewBody"
+      responses:
+        "200":
+          description: SSE stream of market overview
+          content:
+            text/event-stream: {}
+
 components:
   schemas:
     HealthStatus:
@@ -191,8 +450,16 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
+
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    # ── OpenAI ──────────────────────────────────────────────────────────────
     OpenaiConversation:
       type: object
       properties:
@@ -203,10 +470,8 @@ components:
         createdAt:
           type: string
           format: date-time
-      required:
-        - id
-        - title
-        - createdAt
+      required: [id, title, createdAt]
+
     OpenaiMessage:
       type: object
       properties:
@@ -221,34 +486,29 @@ components:
         createdAt:
           type: string
           format: date-time
-      required:
-        - id
-        - conversationId
-        - role
-        - content
-        - createdAt
+      required: [id, conversationId, role, content, createdAt]
+
     CreateOpenaiConversationBody:
       type: object
       properties:
         title:
           type: string
-      required:
-        - title
+      required: [title]
+
     SendOpenaiMessageBody:
       type: object
       properties:
         content:
           type: string
-      required:
-        - content
+      required: [content]
+
     SendOpenaiVoiceMessageBody:
       type: object
       properties:
         audio:
           type: string
-          description: Base64-encoded audio data
-      required:
-        - audio
+      required: [audio]
+
     OpenaiConversationWithMessages:
       type: object
       properties:
@@ -263,11 +523,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/OpenaiMessage"
-      required:
-        - id
-        - title
-        - createdAt
-        - messages
+      required: [id, title, createdAt, messages]
+
     GenerateOpenaiImageBody:
       type: object
       properties:
@@ -276,19 +533,279 @@ components:
         size:
           type: string
           enum: ["1024x1024", "512x512", "256x256"]
-      required:
-        - prompt
+      required: [prompt]
+
     GenerateOpenaiImageResponse:
       type: object
       properties:
         b64_json:
           type: string
-      required:
-        - b64_json
+      required: [b64_json]
+
     OpenaiError:
       type: object
       properties:
         error:
           type: string
-      required:
-        - error
+      required: [error]
+
+    # ── Finance ──────────────────────────────────────────────────────────────
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        externalId:
+          type: string
+          nullable: true
+        fromEntity:
+          type: string
+        toEntity:
+          type: string
+        amount:
+          type: string
+        currency:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        gateway:
+          type: string
+          nullable: true
+        metadata:
+          type: string
+          nullable: true
+        aiAnalysis:
+          type: string
+          nullable: true
+        riskScore:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, fromEntity, toEntity, amount, currency, type, status, createdAt]
+
+    CreateTransactionBody:
+      type: object
+      properties:
+        externalId:
+          type: string
+        fromEntity:
+          type: string
+        toEntity:
+          type: string
+        amount:
+          type: string
+        currency:
+          type: string
+        type:
+          type: string
+          description: "Ex: wire_transfer, pix, swift, crypto, trade, card"
+        status:
+          type: string
+          description: "Ex: completed, pending, failed, suspicious"
+        gateway:
+          type: string
+        metadata:
+          type: string
+          description: JSON string with extra context
+      required: [fromEntity, toEntity, amount, type]
+
+    BatchAnalyzeTransactionsBody:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+          description: IDs of transactions to analyze. If empty, uses the last 50.
+      required: []
+
+    BatchAnalysisResult:
+      type: object
+      properties:
+        analyzed:
+          type: integer
+        totalAmount:
+          type: string
+        averageRiskScore:
+          type: number
+        highRiskCount:
+          type: integer
+        summary:
+          type: string
+      required: [analyzed, totalAmount, averageRiskScore, highRiskCount, summary]
+
+    TransactionSummary:
+      type: object
+      properties:
+        totalCount:
+          type: integer
+        totalVolume:
+          type: string
+        averageAmount:
+          type: string
+        highRiskCount:
+          type: integer
+        byType:
+          type: object
+          additionalProperties:
+            type: integer
+        byStatus:
+          type: object
+          additionalProperties:
+            type: integer
+        byGateway:
+          type: object
+          additionalProperties:
+            type: integer
+      required: [totalCount, totalVolume, averageAmount, highRiskCount, byType, byStatus, byGateway]
+
+    Gateway:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        provider:
+          type: string
+        totalVolume:
+          type: string
+          nullable: true
+        transactionCount:
+          type: integer
+          nullable: true
+        successRate:
+          type: string
+          nullable: true
+        avgLatencyMs:
+          type: integer
+          nullable: true
+        status:
+          type: string
+        aiAnalysis:
+          type: string
+          nullable: true
+        lastAnalyzedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, provider, status, createdAt]
+
+    CreateGatewayBody:
+      type: object
+      properties:
+        name:
+          type: string
+        provider:
+          type: string
+          description: "Ex: Stripe, PayPal, Adyen, Pagar.me, PagSeguro, MercadoPago, Braintree"
+        totalVolume:
+          type: string
+        transactionCount:
+          type: integer
+        successRate:
+          type: string
+        avgLatencyMs:
+          type: integer
+        status:
+          type: string
+      required: [name, provider]
+
+    MarketAsset:
+      type: object
+      properties:
+        id:
+          type: integer
+        symbol:
+          type: string
+        name:
+          type: string
+        assetType:
+          type: string
+        currentPrice:
+          type: string
+          nullable: true
+        openPrice:
+          type: string
+          nullable: true
+        closePrice:
+          type: string
+          nullable: true
+        highPrice:
+          type: string
+          nullable: true
+        lowPrice:
+          type: string
+          nullable: true
+        volume:
+          type: string
+          nullable: true
+        marketCap:
+          type: string
+          nullable: true
+        changePct:
+          type: string
+          nullable: true
+        aiAnalysis:
+          type: string
+          nullable: true
+        aiSignal:
+          type: string
+          nullable: true
+        dataDate:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, symbol, name, assetType, createdAt, updatedAt]
+
+    CreateMarketAssetBody:
+      type: object
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+        assetType:
+          type: string
+          description: "Ex: stock, crypto, forex, commodity, index, etf"
+        currentPrice:
+          type: string
+        openPrice:
+          type: string
+        closePrice:
+          type: string
+        highPrice:
+          type: string
+        lowPrice:
+          type: string
+        volume:
+          type: string
+        marketCap:
+          type: string
+        changePct:
+          type: string
+        dataDate:
+          type: string
+      required: [symbol, name, assetType]
+
+    MarketOverviewBody:
+      type: object
+      properties:
+        symbols:
+          type: array
+          items:
+            type: string
+          description: Symbols to include. If empty, uses all tracked assets.
+      required: []

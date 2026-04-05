@@ -9,6 +9,10 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface ApiError {
+  error: string;
+}
+
 export interface OpenaiConversation {
   id: number;
   title: string;
@@ -32,7 +36,6 @@ export interface SendOpenaiMessageBody {
 }
 
 export interface SendOpenaiVoiceMessageBody {
-  /** Base64-encoded audio data */
   audio: string;
 }
 
@@ -64,3 +67,139 @@ export interface GenerateOpenaiImageResponse {
 export interface OpenaiError {
   error: string;
 }
+
+export interface Transaction {
+  id: number;
+  externalId?: string | null;
+  fromEntity: string;
+  toEntity: string;
+  amount: string;
+  currency: string;
+  type: string;
+  status: string;
+  gateway?: string | null;
+  metadata?: string | null;
+  aiAnalysis?: string | null;
+  riskScore?: number | null;
+  createdAt: string;
+}
+
+export interface CreateTransactionBody {
+  externalId?: string;
+  fromEntity: string;
+  toEntity: string;
+  amount: string;
+  currency?: string;
+  /** Ex: wire_transfer, pix, swift, crypto, trade, card */
+  type: string;
+  /** Ex: completed, pending, failed, suspicious */
+  status?: string;
+  gateway?: string;
+  /** JSON string with extra context */
+  metadata?: string;
+}
+
+export interface BatchAnalyzeTransactionsBody {
+  /** IDs of transactions to analyze. If empty, uses the last 50. */
+  ids?: number[];
+}
+
+export interface BatchAnalysisResult {
+  analyzed: number;
+  totalAmount: string;
+  averageRiskScore: number;
+  highRiskCount: number;
+  summary: string;
+}
+
+export type TransactionSummaryByType = { [key: string]: number };
+
+export type TransactionSummaryByStatus = { [key: string]: number };
+
+export type TransactionSummaryByGateway = { [key: string]: number };
+
+export interface TransactionSummary {
+  totalCount: number;
+  totalVolume: string;
+  averageAmount: string;
+  highRiskCount: number;
+  byType: TransactionSummaryByType;
+  byStatus: TransactionSummaryByStatus;
+  byGateway: TransactionSummaryByGateway;
+}
+
+export interface Gateway {
+  id: number;
+  name: string;
+  provider: string;
+  totalVolume?: string | null;
+  transactionCount?: number | null;
+  successRate?: string | null;
+  avgLatencyMs?: number | null;
+  status: string;
+  aiAnalysis?: string | null;
+  lastAnalyzedAt?: string | null;
+  createdAt: string;
+}
+
+export interface CreateGatewayBody {
+  name: string;
+  /** Ex: Stripe, PayPal, Adyen, Pagar.me, PagSeguro, MercadoPago, Braintree */
+  provider: string;
+  totalVolume?: string;
+  transactionCount?: number;
+  successRate?: string;
+  avgLatencyMs?: number;
+  status?: string;
+}
+
+export interface MarketAsset {
+  id: number;
+  symbol: string;
+  name: string;
+  assetType: string;
+  currentPrice?: string | null;
+  openPrice?: string | null;
+  closePrice?: string | null;
+  highPrice?: string | null;
+  lowPrice?: string | null;
+  volume?: string | null;
+  marketCap?: string | null;
+  changePct?: string | null;
+  aiAnalysis?: string | null;
+  aiSignal?: string | null;
+  dataDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateMarketAssetBody {
+  symbol: string;
+  name: string;
+  /** Ex: stock, crypto, forex, commodity, index, etf */
+  assetType: string;
+  currentPrice?: string;
+  openPrice?: string;
+  closePrice?: string;
+  highPrice?: string;
+  lowPrice?: string;
+  volume?: string;
+  marketCap?: string;
+  changePct?: string;
+  dataDate?: string;
+}
+
+export interface MarketOverviewBody {
+  /** Symbols to include. If empty, uses all tracked assets. */
+  symbols?: string[];
+}
+
+export type ListTransactionsParams = {
+  type?: string;
+  status?: string;
+  gateway?: string;
+};
+
+export type ListMarketAssetsParams = {
+  assetType?: string;
+};

@@ -17,6 +17,30 @@ pnpm workspace monorepo using TypeScript. Includes an AI API with chat, image ge
 - **Build**: esbuild (CJS bundle)
 - **AI**: OpenAI via Replit AI Integrations (`@workspace/integrations-openai-ai-server`)
 
+## Finance API Endpoints
+
+All endpoints under `/api/finance/`:
+
+### Transações Bilionárias
+- `GET /finance/transactions` — lista transações (filtros: type, status, gateway)
+- `POST /finance/transactions` — registra transação + análise automática de risco por IA
+- `GET /finance/transactions/:id` — detalhe da transação
+- `POST /finance/transactions/:id/analyze` — re-analisa com IA (SSE streaming)
+- `POST /finance/transactions/batch-analyze` — análise em lote de até 50 transações
+- `GET /finance/transactions/summary` — agregados: volume, risco médio, por tipo/status/gateway
+
+### Gateways de Pagamento
+- `GET /finance/gateways` — lista gateways registrados
+- `POST /finance/gateways` — cadastra gateway (Stripe, Adyen, PagSeguro, MercadoPago, etc.)
+- `GET /finance/gateways/:id` — detalhe do gateway
+- `POST /finance/gateways/:id/analyze` — análise de performance por IA (SSE streaming)
+
+### Mercado / Ativos
+- `GET /finance/market` — lista ativos monitorados (filtro: assetType)
+- `POST /finance/market` — cadastra ativo (ações, crypto, forex, commodities, índices)
+- `POST /finance/market/:id/analyze` — análise técnica + sinal de operação por IA (SSE streaming)
+- `POST /finance/market/overview` — morning call / visão geral da carteira (SSE streaming)
+
 ## AI API Endpoints
 
 All endpoints under `/api/openai/`:

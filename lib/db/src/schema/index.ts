@@ -19,3 +19,6 @@
 
 export * from "./conversations";
 export * from "./messages";
+export * from "./transactions";
+export * from "./gateways";
+export * from "./market_assets";

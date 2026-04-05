@@ -7,6 +7,5 @@
  */
 
 export interface SendOpenaiVoiceMessageBody {
-  /** Base64-encoded audio data */
   audio: string;
 }

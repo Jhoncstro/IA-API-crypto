@@ -17,16 +17,28 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  ApiError,
+  BatchAnalysisResult,
+  BatchAnalyzeTransactionsBody,
+  CreateGatewayBody,
+  CreateMarketAssetBody,
   CreateOpenaiConversationBody,
+  CreateTransactionBody,
+  Gateway,
   GenerateOpenaiImageBody,
   GenerateOpenaiImageResponse,
   HealthStatus,
+  ListMarketAssetsParams,
+  ListTransactionsParams,
+  MarketAsset,
+  MarketOverviewBody,
   OpenaiConversation,
   OpenaiConversationWithMessages,
-  OpenaiError,
   OpenaiMessage,
   SendOpenaiMessageBody,
   SendOpenaiVoiceMessageBody,
+  Transaction,
+  TransactionSummary,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -39,7 +51,6 @@ type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const getHealthCheckUrl = () => {
@@ -303,7 +314,7 @@ export const getGetOpenaiConversationQueryKey = (id: number) => {
 
 export const getGetOpenaiConversationQueryOptions = <
   TData = Awaited<ReturnType<typeof getOpenaiConversation>>,
-  TError = ErrorType<OpenaiError>,
+  TError = ErrorType<ApiError>,
 >(
   id: number,
   options?: {
@@ -339,7 +350,7 @@ export const getGetOpenaiConversationQueryOptions = <
 export type GetOpenaiConversationQueryResult = NonNullable<
   Awaited<ReturnType<typeof getOpenaiConversation>>
 >;
-export type GetOpenaiConversationQueryError = ErrorType<OpenaiError>;
+export type GetOpenaiConversationQueryError = ErrorType<ApiError>;
 
 /**
  * @summary Get conversation with messages
@@ -347,7 +358,7 @@ export type GetOpenaiConversationQueryError = ErrorType<OpenaiError>;
 
 export function useGetOpenaiConversation<
   TData = Awaited<ReturnType<typeof getOpenaiConversation>>,
-  TError = ErrorType<OpenaiError>,
+  TError = ErrorType<ApiError>,
 >(
   id: number,
   options?: {
@@ -386,7 +397,7 @@ export const deleteOpenaiConversation = async (
 };
 
 export const getDeleteOpenaiConversationMutationOptions = <
-  TError = ErrorType<OpenaiError>,
+  TError = ErrorType<ApiError>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -427,13 +438,13 @@ export type DeleteOpenaiConversationMutationResult = NonNullable<
   Awaited<ReturnType<typeof deleteOpenaiConversation>>
 >;
 
-export type DeleteOpenaiConversationMutationError = ErrorType<OpenaiError>;
+export type DeleteOpenaiConversationMutationError = ErrorType<ApiError>;
 
 /**
  * @summary Delete a conversation
  */
 export const useDeleteOpenaiConversation = <
-  TError = ErrorType<OpenaiError>,
+  TError = ErrorType<ApiError>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -627,9 +638,6 @@ export const useSendOpenaiMessage = <
 };
 
 /**
- * This endpoint is for gpt-audio speech-to-speech flows.
-It accepts base64-encoded audio input and streams back transcript and audio events.
-
  * @summary Send audio and receive a streaming voice response
  */
 export const getSendOpenaiVoiceMessageUrl = (id: number) => {
@@ -801,4 +809,1205 @@ export const useGenerateOpenaiImage = <
   TContext
 > => {
   return useMutation(getGenerateOpenaiImageMutationOptions(options));
+};
+
+/**
+ * @summary List all analyzed transactions
+ */
+export const getListTransactionsUrl = (params?: ListTransactionsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/finance/transactions?${stringifiedParams}`
+    : `/api/finance/transactions`;
+};
+
+export const listTransactions = async (
+  params?: ListTransactionsParams,
+  options?: RequestInit,
+): Promise<Transaction[]> => {
+  return customFetch<Transaction[]>(getListTransactionsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTransactionsQueryKey = (
+  params?: ListTransactionsParams,
+) => {
+  return [`/api/finance/transactions`, ...(params ? [params] : [])] as const;
+};
+
+export const getListTransactionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTransactions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListTransactionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listTransactions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListTransactionsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listTransactions>>
+  > = ({ signal }) => listTransactions(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTransactions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListTransactionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTransactions>>
+>;
+export type ListTransactionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all analyzed transactions
+ */
+
+export function useListTransactions<
+  TData = Awaited<ReturnType<typeof listTransactions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListTransactionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listTransactions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListTransactionsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Submit a transaction for AI analysis
+ */
+export const getCreateTransactionUrl = () => {
+  return `/api/finance/transactions`;
+};
+
+export const createTransaction = async (
+  createTransactionBody: CreateTransactionBody,
+  options?: RequestInit,
+): Promise<Transaction> => {
+  return customFetch<Transaction>(getCreateTransactionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createTransactionBody),
+  });
+};
+
+export const getCreateTransactionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTransaction>>,
+    TError,
+    { data: BodyType<CreateTransactionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createTransaction>>,
+  TError,
+  { data: BodyType<CreateTransactionBody> },
+  TContext
+> => {
+  const mutationKey = ["createTransaction"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createTransaction>>,
+    { data: BodyType<CreateTransactionBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createTransaction(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateTransactionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createTransaction>>
+>;
+export type CreateTransactionMutationBody = BodyType<CreateTransactionBody>;
+export type CreateTransactionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Submit a transaction for AI analysis
+ */
+export const useCreateTransaction = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTransaction>>,
+    TError,
+    { data: BodyType<CreateTransactionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createTransaction>>,
+  TError,
+  { data: BodyType<CreateTransactionBody> },
+  TContext
+> => {
+  return useMutation(getCreateTransactionMutationOptions(options));
+};
+
+/**
+ * @summary Get a transaction by ID
+ */
+export const getGetTransactionUrl = (id: number) => {
+  return `/api/finance/transactions/${id}`;
+};
+
+export const getTransaction = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Transaction> => {
+  return customFetch<Transaction>(getGetTransactionUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTransactionQueryKey = (id: number) => {
+  return [`/api/finance/transactions/${id}`] as const;
+};
+
+export const getGetTransactionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTransaction>>,
+  TError = ErrorType<ApiError>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTransaction>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTransactionQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTransaction>>> = ({
+    signal,
+  }) => getTransaction(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTransaction>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTransactionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTransaction>>
+>;
+export type GetTransactionQueryError = ErrorType<ApiError>;
+
+/**
+ * @summary Get a transaction by ID
+ */
+
+export function useGetTransaction<
+  TData = Awaited<ReturnType<typeof getTransaction>>,
+  TError = ErrorType<ApiError>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTransaction>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTransactionQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Re-run AI analysis on an existing transaction (streaming)
+ */
+export const getAnalyzeTransactionUrl = (id: number) => {
+  return `/api/finance/transactions/${id}/analyze`;
+};
+
+export const analyzeTransaction = async (
+  id: number,
+  options?: RequestInit,
+): Promise<unknown> => {
+  return customFetch<unknown>(getAnalyzeTransactionUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAnalyzeTransactionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analyzeTransaction>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof analyzeTransaction>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["analyzeTransaction"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof analyzeTransaction>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return analyzeTransaction(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AnalyzeTransactionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof analyzeTransaction>>
+>;
+
+export type AnalyzeTransactionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Re-run AI analysis on an existing transaction (streaming)
+ */
+export const useAnalyzeTransaction = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analyzeTransaction>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof analyzeTransaction>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAnalyzeTransactionMutationOptions(options));
+};
+
+/**
+ * @summary AI analysis over a batch of transactions
+ */
+export const getBatchAnalyzeTransactionsUrl = () => {
+  return `/api/finance/transactions/batch-analyze`;
+};
+
+export const batchAnalyzeTransactions = async (
+  batchAnalyzeTransactionsBody: BatchAnalyzeTransactionsBody,
+  options?: RequestInit,
+): Promise<BatchAnalysisResult> => {
+  return customFetch<BatchAnalysisResult>(getBatchAnalyzeTransactionsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(batchAnalyzeTransactionsBody),
+  });
+};
+
+export const getBatchAnalyzeTransactionsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof batchAnalyzeTransactions>>,
+    TError,
+    { data: BodyType<BatchAnalyzeTransactionsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof batchAnalyzeTransactions>>,
+  TError,
+  { data: BodyType<BatchAnalyzeTransactionsBody> },
+  TContext
+> => {
+  const mutationKey = ["batchAnalyzeTransactions"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof batchAnalyzeTransactions>>,
+    { data: BodyType<BatchAnalyzeTransactionsBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return batchAnalyzeTransactions(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BatchAnalyzeTransactionsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof batchAnalyzeTransactions>>
+>;
+export type BatchAnalyzeTransactionsMutationBody =
+  BodyType<BatchAnalyzeTransactionsBody>;
+export type BatchAnalyzeTransactionsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary AI analysis over a batch of transactions
+ */
+export const useBatchAnalyzeTransactions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof batchAnalyzeTransactions>>,
+    TError,
+    { data: BodyType<BatchAnalyzeTransactionsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof batchAnalyzeTransactions>>,
+  TError,
+  { data: BodyType<BatchAnalyzeTransactionsBody> },
+  TContext
+> => {
+  return useMutation(getBatchAnalyzeTransactionsMutationOptions(options));
+};
+
+/**
+ * @summary Aggregate summary of all transactions
+ */
+export const getGetTransactionSummaryUrl = () => {
+  return `/api/finance/transactions/summary`;
+};
+
+export const getTransactionSummary = async (
+  options?: RequestInit,
+): Promise<TransactionSummary> => {
+  return customFetch<TransactionSummary>(getGetTransactionSummaryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTransactionSummaryQueryKey = () => {
+  return [`/api/finance/transactions/summary`] as const;
+};
+
+export const getGetTransactionSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTransactionSummary>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTransactionSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTransactionSummaryQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTransactionSummary>>
+  > = ({ signal }) => getTransactionSummary({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTransactionSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTransactionSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTransactionSummary>>
+>;
+export type GetTransactionSummaryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Aggregate summary of all transactions
+ */
+
+export function useGetTransactionSummary<
+  TData = Awaited<ReturnType<typeof getTransactionSummary>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getTransactionSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTransactionSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List all payment gateways
+ */
+export const getListGatewaysUrl = () => {
+  return `/api/finance/gateways`;
+};
+
+export const listGateways = async (
+  options?: RequestInit,
+): Promise<Gateway[]> => {
+  return customFetch<Gateway[]>(getListGatewaysUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListGatewaysQueryKey = () => {
+  return [`/api/finance/gateways`] as const;
+};
+
+export const getListGatewaysQueryOptions = <
+  TData = Awaited<ReturnType<typeof listGateways>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listGateways>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListGatewaysQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listGateways>>> = ({
+    signal,
+  }) => listGateways({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listGateways>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListGatewaysQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listGateways>>
+>;
+export type ListGatewaysQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all payment gateways
+ */
+
+export function useListGateways<
+  TData = Awaited<ReturnType<typeof listGateways>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listGateways>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListGatewaysQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Register a new payment gateway
+ */
+export const getCreateGatewayUrl = () => {
+  return `/api/finance/gateways`;
+};
+
+export const createGateway = async (
+  createGatewayBody: CreateGatewayBody,
+  options?: RequestInit,
+): Promise<Gateway> => {
+  return customFetch<Gateway>(getCreateGatewayUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createGatewayBody),
+  });
+};
+
+export const getCreateGatewayMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGateway>>,
+    TError,
+    { data: BodyType<CreateGatewayBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createGateway>>,
+  TError,
+  { data: BodyType<CreateGatewayBody> },
+  TContext
+> => {
+  const mutationKey = ["createGateway"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createGateway>>,
+    { data: BodyType<CreateGatewayBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createGateway(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateGatewayMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createGateway>>
+>;
+export type CreateGatewayMutationBody = BodyType<CreateGatewayBody>;
+export type CreateGatewayMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Register a new payment gateway
+ */
+export const useCreateGateway = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGateway>>,
+    TError,
+    { data: BodyType<CreateGatewayBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createGateway>>,
+  TError,
+  { data: BodyType<CreateGatewayBody> },
+  TContext
+> => {
+  return useMutation(getCreateGatewayMutationOptions(options));
+};
+
+/**
+ * @summary Get gateway by ID
+ */
+export const getGetGatewayUrl = (id: number) => {
+  return `/api/finance/gateways/${id}`;
+};
+
+export const getGateway = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Gateway> => {
+  return customFetch<Gateway>(getGetGatewayUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGatewayQueryKey = (id: number) => {
+  return [`/api/finance/gateways/${id}`] as const;
+};
+
+export const getGetGatewayQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGateway>>,
+  TError = ErrorType<ApiError>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGateway>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetGatewayQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getGateway>>> = ({
+    signal,
+  }) => getGateway(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGateway>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGatewayQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGateway>>
+>;
+export type GetGatewayQueryError = ErrorType<ApiError>;
+
+/**
+ * @summary Get gateway by ID
+ */
+
+export function useGetGateway<
+  TData = Awaited<ReturnType<typeof getGateway>>,
+  TError = ErrorType<ApiError>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGateway>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGatewayQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary AI analysis of gateway performance (streaming)
+ */
+export const getAnalyzeGatewayUrl = (id: number) => {
+  return `/api/finance/gateways/${id}/analyze`;
+};
+
+export const analyzeGateway = async (
+  id: number,
+  options?: RequestInit,
+): Promise<unknown> => {
+  return customFetch<unknown>(getAnalyzeGatewayUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAnalyzeGatewayMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analyzeGateway>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof analyzeGateway>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["analyzeGateway"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof analyzeGateway>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return analyzeGateway(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AnalyzeGatewayMutationResult = NonNullable<
+  Awaited<ReturnType<typeof analyzeGateway>>
+>;
+
+export type AnalyzeGatewayMutationError = ErrorType<unknown>;
+
+/**
+ * @summary AI analysis of gateway performance (streaming)
+ */
+export const useAnalyzeGateway = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analyzeGateway>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof analyzeGateway>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAnalyzeGatewayMutationOptions(options));
+};
+
+/**
+ * @summary List tracked market assets
+ */
+export const getListMarketAssetsUrl = (params?: ListMarketAssetsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/finance/market?${stringifiedParams}`
+    : `/api/finance/market`;
+};
+
+export const listMarketAssets = async (
+  params?: ListMarketAssetsParams,
+  options?: RequestInit,
+): Promise<MarketAsset[]> => {
+  return customFetch<MarketAsset[]>(getListMarketAssetsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListMarketAssetsQueryKey = (
+  params?: ListMarketAssetsParams,
+) => {
+  return [`/api/finance/market`, ...(params ? [params] : [])] as const;
+};
+
+export const getListMarketAssetsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMarketAssets>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListMarketAssetsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMarketAssets>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListMarketAssetsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listMarketAssets>>
+  > = ({ signal }) => listMarketAssets(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMarketAssets>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListMarketAssetsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMarketAssets>>
+>;
+export type ListMarketAssetsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List tracked market assets
+ */
+
+export function useListMarketAssets<
+  TData = Awaited<ReturnType<typeof listMarketAssets>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListMarketAssetsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listMarketAssets>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListMarketAssetsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add or update a market asset
+ */
+export const getCreateMarketAssetUrl = () => {
+  return `/api/finance/market`;
+};
+
+export const createMarketAsset = async (
+  createMarketAssetBody: CreateMarketAssetBody,
+  options?: RequestInit,
+): Promise<MarketAsset> => {
+  return customFetch<MarketAsset>(getCreateMarketAssetUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createMarketAssetBody),
+  });
+};
+
+export const getCreateMarketAssetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMarketAsset>>,
+    TError,
+    { data: BodyType<CreateMarketAssetBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createMarketAsset>>,
+  TError,
+  { data: BodyType<CreateMarketAssetBody> },
+  TContext
+> => {
+  const mutationKey = ["createMarketAsset"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createMarketAsset>>,
+    { data: BodyType<CreateMarketAssetBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createMarketAsset(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateMarketAssetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createMarketAsset>>
+>;
+export type CreateMarketAssetMutationBody = BodyType<CreateMarketAssetBody>;
+export type CreateMarketAssetMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add or update a market asset
+ */
+export const useCreateMarketAsset = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createMarketAsset>>,
+    TError,
+    { data: BodyType<CreateMarketAssetBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createMarketAsset>>,
+  TError,
+  { data: BodyType<CreateMarketAssetBody> },
+  TContext
+> => {
+  return useMutation(getCreateMarketAssetMutationOptions(options));
+};
+
+/**
+ * @summary AI analysis of a market asset (streaming)
+ */
+export const getAnalyzeMarketAssetUrl = (id: number) => {
+  return `/api/finance/market/${id}/analyze`;
+};
+
+export const analyzeMarketAsset = async (
+  id: number,
+  options?: RequestInit,
+): Promise<unknown> => {
+  return customFetch<unknown>(getAnalyzeMarketAssetUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAnalyzeMarketAssetMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analyzeMarketAsset>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof analyzeMarketAsset>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["analyzeMarketAsset"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof analyzeMarketAsset>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return analyzeMarketAsset(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AnalyzeMarketAssetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof analyzeMarketAsset>>
+>;
+
+export type AnalyzeMarketAssetMutationError = ErrorType<unknown>;
+
+/**
+ * @summary AI analysis of a market asset (streaming)
+ */
+export const useAnalyzeMarketAsset = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analyzeMarketAsset>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof analyzeMarketAsset>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getAnalyzeMarketAssetMutationOptions(options));
+};
+
+/**
+ * @summary AI-powered overview of the full market portfolio (streaming)
+ */
+export const getGetMarketOverviewUrl = () => {
+  return `/api/finance/market/overview`;
+};
+
+export const getMarketOverview = async (
+  marketOverviewBody: MarketOverviewBody,
+  options?: RequestInit,
+): Promise<unknown> => {
+  return customFetch<unknown>(getGetMarketOverviewUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(marketOverviewBody),
+  });
+};
+
+export const getGetMarketOverviewMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getMarketOverview>>,
+    TError,
+    { data: BodyType<MarketOverviewBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getMarketOverview>>,
+  TError,
+  { data: BodyType<MarketOverviewBody> },
+  TContext
+> => {
+  const mutationKey = ["getMarketOverview"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getMarketOverview>>,
+    { data: BodyType<MarketOverviewBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return getMarketOverview(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetMarketOverviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getMarketOverview>>
+>;
+export type GetMarketOverviewMutationBody = BodyType<MarketOverviewBody>;
+export type GetMarketOverviewMutationError = ErrorType<unknown>;
+
+/**
+ * @summary AI-powered overview of the full market portfolio (streaming)
+ */
+export const useGetMarketOverview = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getMarketOverview>>,
+    TError,
+    { data: BodyType<MarketOverviewBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getMarketOverview>>,
+  TError,
+  { data: BodyType<MarketOverviewBody> },
+  TContext
+> => {
+  return useMutation(getGetMarketOverviewMutationOptions(options));
 };

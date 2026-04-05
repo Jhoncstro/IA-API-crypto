@@ -6,14 +6,30 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./apiError";
+export * from "./batchAnalysisResult";
+export * from "./batchAnalyzeTransactionsBody";
+export * from "./createGatewayBody";
+export * from "./createMarketAssetBody";
 export * from "./createOpenaiConversationBody";
+export * from "./createTransactionBody";
+export * from "./gateway";
 export * from "./generateOpenaiImageBody";
 export * from "./generateOpenaiImageBodySize";
 export * from "./generateOpenaiImageResponse";
 export * from "./healthStatus";
+export * from "./listMarketAssetsParams";
+export * from "./listTransactionsParams";
+export * from "./marketAsset";
+export * from "./marketOverviewBody";
 export * from "./openaiConversation";
 export * from "./openaiConversationWithMessages";
 export * from "./openaiError";
 export * from "./openaiMessage";
 export * from "./sendOpenaiMessageBody";
 export * from "./sendOpenaiVoiceMessageBody";
+export * from "./transaction";
+export * from "./transactionSummary";
+export * from "./transactionSummaryByGateway";
+export * from "./transactionSummaryByStatus";
+export * from "./transactionSummaryByType";

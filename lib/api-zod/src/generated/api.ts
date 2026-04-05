@@ -8,7 +8,6 @@
 import * as zod from "zod";
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -93,9 +92,6 @@ export const SendOpenaiMessageBody = zod.object({
 });
 
 /**
- * This endpoint is for gpt-audio speech-to-speech flows.
-It accepts base64-encoded audio input and streams back transcript and audio events.
-
  * @summary Send audio and receive a streaming voice response
  */
 export const SendOpenaiVoiceMessageParams = zod.object({
@@ -103,7 +99,7 @@ export const SendOpenaiVoiceMessageParams = zod.object({
 });
 
 export const SendOpenaiVoiceMessageBody = zod.object({
-  audio: zod.string().describe("Base64-encoded audio data"),
+  audio: zod.string(),
 });
 
 /**
@@ -116,4 +112,239 @@ export const GenerateOpenaiImageBody = zod.object({
 
 export const GenerateOpenaiImageResponse = zod.object({
   b64_json: zod.string(),
+});
+
+/**
+ * @summary List all analyzed transactions
+ */
+export const ListTransactionsQueryParams = zod.object({
+  type: zod.coerce.string().optional(),
+  status: zod.coerce.string().optional(),
+  gateway: zod.coerce.string().optional(),
+});
+
+export const ListTransactionsResponseItem = zod.object({
+  id: zod.number(),
+  externalId: zod.string().nullish(),
+  fromEntity: zod.string(),
+  toEntity: zod.string(),
+  amount: zod.string(),
+  currency: zod.string(),
+  type: zod.string(),
+  status: zod.string(),
+  gateway: zod.string().nullish(),
+  metadata: zod.string().nullish(),
+  aiAnalysis: zod.string().nullish(),
+  riskScore: zod.number().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const ListTransactionsResponse = zod.array(ListTransactionsResponseItem);
+
+/**
+ * @summary Submit a transaction for AI analysis
+ */
+export const CreateTransactionBody = zod.object({
+  externalId: zod.string().optional(),
+  fromEntity: zod.string(),
+  toEntity: zod.string(),
+  amount: zod.string(),
+  currency: zod.string().optional(),
+  type: zod
+    .string()
+    .describe("Ex: wire_transfer, pix, swift, crypto, trade, card"),
+  status: zod
+    .string()
+    .optional()
+    .describe("Ex: completed, pending, failed, suspicious"),
+  gateway: zod.string().optional(),
+  metadata: zod.string().optional().describe("JSON string with extra context"),
+});
+
+/**
+ * @summary Get a transaction by ID
+ */
+export const GetTransactionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetTransactionResponse = zod.object({
+  id: zod.number(),
+  externalId: zod.string().nullish(),
+  fromEntity: zod.string(),
+  toEntity: zod.string(),
+  amount: zod.string(),
+  currency: zod.string(),
+  type: zod.string(),
+  status: zod.string(),
+  gateway: zod.string().nullish(),
+  metadata: zod.string().nullish(),
+  aiAnalysis: zod.string().nullish(),
+  riskScore: zod.number().nullish(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Re-run AI analysis on an existing transaction (streaming)
+ */
+export const AnalyzeTransactionParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary AI analysis over a batch of transactions
+ */
+export const BatchAnalyzeTransactionsBody = zod.object({
+  ids: zod
+    .array(zod.number())
+    .optional()
+    .describe("IDs of transactions to analyze. If empty, uses the last 50."),
+});
+
+export const BatchAnalyzeTransactionsResponse = zod.object({
+  analyzed: zod.number(),
+  totalAmount: zod.string(),
+  averageRiskScore: zod.number(),
+  highRiskCount: zod.number(),
+  summary: zod.string(),
+});
+
+/**
+ * @summary Aggregate summary of all transactions
+ */
+export const GetTransactionSummaryResponse = zod.object({
+  totalCount: zod.number(),
+  totalVolume: zod.string(),
+  averageAmount: zod.string(),
+  highRiskCount: zod.number(),
+  byType: zod.record(zod.string(), zod.number()),
+  byStatus: zod.record(zod.string(), zod.number()),
+  byGateway: zod.record(zod.string(), zod.number()),
+});
+
+/**
+ * @summary List all payment gateways
+ */
+export const ListGatewaysResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  provider: zod.string(),
+  totalVolume: zod.string().nullish(),
+  transactionCount: zod.number().nullish(),
+  successRate: zod.string().nullish(),
+  avgLatencyMs: zod.number().nullish(),
+  status: zod.string(),
+  aiAnalysis: zod.string().nullish(),
+  lastAnalyzedAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const ListGatewaysResponse = zod.array(ListGatewaysResponseItem);
+
+/**
+ * @summary Register a new payment gateway
+ */
+export const CreateGatewayBody = zod.object({
+  name: zod.string(),
+  provider: zod
+    .string()
+    .describe(
+      "Ex: Stripe, PayPal, Adyen, Pagar.me, PagSeguro, MercadoPago, Braintree",
+    ),
+  totalVolume: zod.string().optional(),
+  transactionCount: zod.number().optional(),
+  successRate: zod.string().optional(),
+  avgLatencyMs: zod.number().optional(),
+  status: zod.string().optional(),
+});
+
+/**
+ * @summary Get gateway by ID
+ */
+export const GetGatewayParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetGatewayResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  provider: zod.string(),
+  totalVolume: zod.string().nullish(),
+  transactionCount: zod.number().nullish(),
+  successRate: zod.string().nullish(),
+  avgLatencyMs: zod.number().nullish(),
+  status: zod.string(),
+  aiAnalysis: zod.string().nullish(),
+  lastAnalyzedAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary AI analysis of gateway performance (streaming)
+ */
+export const AnalyzeGatewayParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List tracked market assets
+ */
+export const ListMarketAssetsQueryParams = zod.object({
+  assetType: zod.coerce.string().optional(),
+});
+
+export const ListMarketAssetsResponseItem = zod.object({
+  id: zod.number(),
+  symbol: zod.string(),
+  name: zod.string(),
+  assetType: zod.string(),
+  currentPrice: zod.string().nullish(),
+  openPrice: zod.string().nullish(),
+  closePrice: zod.string().nullish(),
+  highPrice: zod.string().nullish(),
+  lowPrice: zod.string().nullish(),
+  volume: zod.string().nullish(),
+  marketCap: zod.string().nullish(),
+  changePct: zod.string().nullish(),
+  aiAnalysis: zod.string().nullish(),
+  aiSignal: zod.string().nullish(),
+  dataDate: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const ListMarketAssetsResponse = zod.array(ListMarketAssetsResponseItem);
+
+/**
+ * @summary Add or update a market asset
+ */
+export const CreateMarketAssetBody = zod.object({
+  symbol: zod.string(),
+  name: zod.string(),
+  assetType: zod
+    .string()
+    .describe("Ex: stock, crypto, forex, commodity, index, etf"),
+  currentPrice: zod.string().optional(),
+  openPrice: zod.string().optional(),
+  closePrice: zod.string().optional(),
+  highPrice: zod.string().optional(),
+  lowPrice: zod.string().optional(),
+  volume: zod.string().optional(),
+  marketCap: zod.string().optional(),
+  changePct: zod.string().optional(),
+  dataDate: zod.string().optional(),
+});
+
+/**
+ * @summary AI analysis of a market asset (streaming)
+ */
+export const AnalyzeMarketAssetParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary AI-powered overview of the full market portfolio (streaming)
+ */
+export const GetMarketOverviewBody = zod.object({
+  symbols: zod
+    .array(zod.string())
+    .optional()
+    .describe("Symbols to include. If empty, uses all tracked assets."),
 });
